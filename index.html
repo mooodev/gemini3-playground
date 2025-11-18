@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LADA 2107 Drift - Enhanced 3D Physics</title>
+    <style>
+        /* Base styles */
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #050505; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            color: white;
+        }
+        canvas { 
+            display: block; 
+            width: 100vw; 
+            height: 100vh; 
+        }
+        
+        /* UI container */
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            z-index: 10;
+            text-shadow: 1px 1px 2px #000;
+        }
+        h1 { 
+            margin: 0; 
+            font-size: 24px; 
+            color: #ff9900; 
+        }
+        p { 
+            margin: 5px 0; 
+            color: #ccc; 
+            font-size: 16px; 
+        }
+        .key { 
+            color: #00ffff; 
+            font-weight: bold; 
+        }
+        
+        /* Drift Angle Indicator (Conceptual Feedback) */
+        #drift-angle {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 100px; /* Made slightly smaller for clean look */
+            height: 100px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.4);
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: bold;
+            color: #ffcc00;
+            box-shadow: 0 0 10px rgba(255, 204, 0, 0.3);
+            pointer-events: none;
+        }
+        #drift-angle span {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+    </style>
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<div id="ui">
+    <h1>LADA 2107 DRIFT 🛠️</h1>
+    <p><span class="key">WASD</span> to Drive | <span class="key">SPACE</span> to Handbrake</p>
+    <p id="speed">0 KM/H</p>
+    <p id="slide-val">Slide: 0</p>
+</div>
+
+<!-- Drift Angle Indicator -->
+<div id="drift-angle">
+    <span id="angle-value">0°</span>
+    <span>DRIFT ANGLE</span>
+</div>
+
+
+<script>
+    // --- GLOBAL VARIABLES ---
+    let scene, camera, renderer;
+    let carGroup, carBody; 
+    let wheels = [];
+    let skidmarks = [];
+    let tlL, tlR; // Taillight meshes
+    let matTailOff, matBrakeOn; // Brake light materials
+
+    // --- SMOKE PARTICLE SYSTEM VARIABLES ---
+    let smokeParticles = [];
+    const maxSmokeParticles = 300;
+    
+    // Physics State
+    let pos = { x: 0, z: 0 };
+    let vel = { x: 0, z: 0 }; // Global Velocity
+    let angle = 0; // Facing direction
+    
+    // Configuration
+    const CONFIG = {
+        accel: 0.6,
+        reverse: 0.025,
+        turnSpeed: 0.05,
+        drag: 0.97,
+        grip: 0.15,
+        // Conceptual Improvement: Reduced grip drastically when handbrake is used
+        drift: 0.85, 
+        tilt: 0.015 // Increased tilt for visual feedback
+    };
+
+    // Input State
+    const keys = { w: false, a: false, s: false, d: false, space: false };
+
+    // --- SMOKE TEXTURE AND MATERIAL ---
+    function createSmokeTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext('2d');
+        
+        // Radial gradient for a soft, round appearance (Visual Structural Improvement)
+        const gradient = ctx.createRadialGradient(
+            canvas.width / 2, canvas.height / 2, 0, 
+            canvas.width / 2, canvas.height / 2, canvas.width / 2
+        );
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)'); 
+        gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.5)');
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    const smokeMaterial = new THREE.SpriteMaterial({ 
+        color: 0xaaaaaa, // Lighter grey for better smoke visibility
+        transparent: true, 
+        opacity: 0.8, 
+        map: createSmokeTexture(), 
+        blending: THREE.AdditiveBlending,
+        depthWrite: false 
+    });
+
+    function init() {
+        // 1. SCENE
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x101015);
+        // Structural Improvement: Add dark fog for atmosphere
+        scene.fog = new THREE.FogExp2(0x101015, 0.001); 
+
+        // 2. CAMERA
+        camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 5000);
+        camera.position.set(0, 70, -100); 
+
+        // 3. RENDERER
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // Structural Improvement: Tone Mapping for contrast
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        document.body.appendChild(renderer.domElement);
+        
+        // 4. LIGHTING
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(100, 200, -100);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        const d = 500;
+        dirLight.shadow.camera.left = -d; dirLight.shadow.camera.right = d;
+        dirLight.shadow.camera.top = d; dirLight.shadow.camera.bottom = -d;
+        dirLight.shadow.bias = -0.001;
+        scene.add(dirLight);
+
+        // 5. ENVIRONMENT (Structural Improvement: Stylized ground)
+        const planeGeo = new THREE.PlaneGeometry(10000, 10000);
+        const planeMat = new THREE.MeshStandardMaterial({ 
+            color: 0x151515, 
+            roughness: 0.9, 
+            metalness: 0.1 
+        });
+        const ground = new THREE.Mesh(planeGeo, planeMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Grid remains as a structural reference
+        const grid = new THREE.GridHelper(10000, 200, 0x333333, 0x1a1a1a);
+        grid.position.y = 0.1;
+        scene.add(grid);
+
+        // 6. BUILD CAR
+        createLada();
+
+        // 7. LISTENERS
+        window.addEventListener('resize', onResize);
+        window.addEventListener('keydown', (e) => updateKey(e, true));
+        window.addEventListener('keyup', (e) => updateKey(e, false));
+
+        // 8. START
+        animate();
+    }
+
+    function createLada() {
+        carGroup = new THREE.Group();
+        scene.add(carGroup);
+
+        // Materials
+        const matBody = new THREE.MeshStandardMaterial({ color: 0xaa0000, roughness: 0.2, metalness: 0.3 });
+        // Structural Improvement: Brake Light Materials
+        matTailOff = new THREE.MeshBasicMaterial({ color: 0x880000 }); 
+        matBrakeOn = new THREE.MeshBasicMaterial({ color: 0xff0000 }); 
+        const matGlass = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.7 });
+        const matLight = new THREE.MeshBasicMaterial({ color: 0xffffcc });
+        const matBumper = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
+
+        // --- CAR BODY GROUP (Handles Tilt) ---
+        carBody = new THREE.Group();
+        carGroup.add(carBody);
+
+        // Chassis
+        const chassis = new THREE.Mesh(new THREE.BoxGeometry(20, 6, 44), matBody);
+        chassis.position.y = 6;
+        chassis.castShadow = true;
+        carBody.add(chassis);
+
+        // Cabin
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(18, 5, 24), matGlass);
+        cabin.position.set(0, 11.5, -2);
+        carBody.add(cabin);
+
+        // Roof
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(18.2, 0.5, 25), matBody);
+        roof.position.set(0, 14, -2);
+        roof.castShadow = true;
+        carBody.add(roof);
+
+        // Bumpers
+        const fBump = new THREE.Mesh(new THREE.BoxGeometry(21, 2, 2), matBumper);
+        fBump.position.set(0, 4, 23);
+        carBody.add(fBump);
+        const rBump = new THREE.Mesh(new THREE.BoxGeometry(21, 2, 2), matBumper);
+        rBump.position.set(0, 4, -23);
+        carBody.add(rBump);
+
+        // Headlights (Physical)
+        const hlGeo = new THREE.BoxGeometry(3.5, 2.5, 1);
+        const hlL = new THREE.Mesh(hlGeo, matLight); hlL.position.set(-7, 6, 22.5); carBody.add(hlL);
+        const hlR = new THREE.Mesh(hlGeo, matLight); hlR.position.set(7, 6, 22.5); carBody.add(hlR);
+        
+        // Taillights (Brake Light Control)
+        tlL = new THREE.Mesh(hlGeo, matTailOff); tlL.position.set(-7, 6, -22.5); carBody.add(tlL);
+        tlR = new THREE.Mesh(hlGeo, matTailOff); tlR.position.set(7, 6, -22.5); carBody.add(tlR);
+
+        // Headlights (Spotlights)
+        function createSpot(x) {
+            const spot = new THREE.SpotLight(0xffffee, 15);
+            spot.position.set(x, 6, 22);
+            spot.angle = 0.5;
+            spot.penumbra = 0.5; 
+            spot.decay = 2;
+            spot.distance = 300;
+            spot.castShadow = true;
+            spot.shadow.bias = -0.0001;
+
+            const target = new THREE.Object3D();
+            target.position.set(x, 2, 50); 
+            
+            spot.target = target;
+            carBody.add(spot);
+            carBody.add(target);
+
+            // Add glow sprite
+            const spriteMat = new THREE.SpriteMaterial({ 
+                color: 0xffffee, 
+                transparent: true, opacity: 0.5, 
+                blending: THREE.AdditiveBlending 
+            });
+            const glow = new THREE.Sprite(spriteMat);
+            glow.position.set(x, 6, 24);
+            glow.scale.set(6, 6, 1);
+            carBody.add(glow);
+        }
+        createSpot(-7);
+        createSpot(7);
+
+        // --- WHEELS ---
+        const wheelGeo = new THREE.CylinderGeometry(3.2, 3.2, 2.2, 32);
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9, metalness: 0.1 });
+        const wPos = [
+            { x: -10.5, z: 14 }, { x: 10.5, z: 14 },
+            { x: -10.5, z: -14 }, { x: 10.5, z: -14 }
+        ];
+
+        wPos.forEach(p => {
+            const w = new THREE.Mesh(wheelGeo, wheelMat);
+            w.rotation.z = Math.PI / 2;
+            w.position.set(p.x, 3.2, p.z);
+            w.castShadow = true;
+            carGroup.add(w);
+            wheels.push(w);
+        });
+    }
+
+    function updateKey(e, state) {
+        const k = e.key.toLowerCase();
+        if (k === 'w' || k === 'arrowup') keys.w = state;
+        if (k === 's' || k === 'arrowdown') keys.s = state;
+        if (k === 'a' || k === 'arrowleft') keys.a = state;
+        if (k === 'd' || k === 'arrowright') keys.d = state;
+        if (k === ' ') keys.space = state;
+    }
+
+    // --- SKIDMARK FUNCTIONS ---
+    function addSkidmark(x, z, rot, slide) {
+        if (Math.abs(slide) < 0.5) return; // Only draw if sliding significantly
+        
+        const geo = new THREE.PlaneGeometry(12, 3); 
+        const opacity = Math.min(Math.abs(slide)/30, 0.4); 
+        const mat = new THREE.MeshBasicMaterial({ 
+            color: 0x0a0a0a, 
+            opacity: opacity, 
+            transparent: true, 
+            side: THREE.DoubleSide, 
+            depthWrite: false 
+        });
+        const m = new THREE.Mesh(geo, mat);
+        
+        m.rotation.x = -Math.PI / 2;
+        m.rotation.z = rot;
+        m.position.set(x, 0.05, z); 
+        
+        scene.add(m);
+        skidmarks.push({ mesh: m, life: 1000 }); 
+    }
+
+    function updateSkidmarks() {
+        for (let i = skidmarks.length - 1; i >= 0; i--) {
+            let s = skidmarks[i];
+            s.life--;
+            s.mesh.material.opacity *= 0.999; 
+            if (s.life <= 0) {
+                scene.remove(s.mesh);
+                skidmarks.splice(i, 1);
+            }
+        }
+    }
+
+    // --- SMOKE PARTICLE FUNCTIONS (FIXED: Takes slideVal as argument) ---
+    function addSmokeParticle(x, z, rot, slideVal) {
+        // Optimization: don't emit if not sliding enough
+        if (Math.abs(slideVal) < 0.5) return; 
+        
+        const wheelOffsetZ = 14; 
+        const wheelOffsetX = 10.5;
+
+        // Use slideVal for scaling particle emission (Conceptual Improvement)
+        const slideFactor = Math.abs(slideVal) / 5; 
+
+        // Calculate the world position of the rear wheels
+        const rearL_x = x + Math.sin(rot) * -wheelOffsetZ + Math.cos(rot) * -wheelOffsetX;
+        const rearL_z = z + Math.cos(rot) * -wheelOffsetZ - Math.sin(rot) * -wheelOffsetX;
+
+        const rearR_x = x + Math.sin(rot) * -wheelOffsetZ + Math.cos(rot) * wheelOffsetX;
+        const rearR_z = z + Math.cos(rot) * -wheelOffsetZ - Math.sin(rot) * wheelOffsetX;
+
+        // Generate particles near both rear wheels
+        [
+            { x: rearL_x, z: rearL_z }, 
+            { x: rearR_x, z: rearR_z }
+        ].forEach(p => {
+            if (smokeParticles.length >= maxSmokeParticles) return;
+            if (Math.random() > 0.4) return; 
+
+            const size = Math.random() * 5 + 3 + slideFactor; 
+            const sprite = new THREE.Sprite(smokeMaterial.clone());
+            
+            sprite.position.set(p.x + Math.random() * 1.5 - 0.75, 1, p.z + Math.random() * 1.5 - 0.75);
+            sprite.scale.set(size, size, size);
+            sprite.material.opacity = 0.4 + Math.random() * 0.3; 
+            
+            scene.add(sprite);
+            smokeParticles.push({
+                mesh: sprite,
+                life: 60 + Math.random() * 60, 
+                startLife: 60,
+                // Give particles slight sideways/backward velocity (smoke trail)
+                vx: (Math.random() * 0.2 - 0.1) * slideFactor, 
+                vz: (Math.random() * 0.2 - 0.1) * slideFactor
+            });
+        });
+    }
+
+    function updateSmokeParticles() {
+        for (let i = smokeParticles.length - 1; i >= 0; i--) {
+            let p = smokeParticles[i];
+            
+            p.mesh.position.y += 0.05; 
+            p.mesh.position.x += p.vx;
+            p.mesh.position.z += p.vz;
+            
+            p.life--;
+
+            const lifeRatio = p.life / p.startLife;
+            p.mesh.material.opacity = Math.max(0, lifeRatio) * 0.6; 
+            p.mesh.scale.multiplyScalar(1.02); 
+
+            if (p.life <= 0) {
+                scene.remove(p.mesh);
+                smokeParticles.splice(i, 1);
+            }
+        }
+    }
+
+
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // --- 1. CALCULATE PHYSICS ---
+        const sin = Math.sin(angle);
+        const cos = Math.cos(angle);
+
+        let fwdVel = (vel.x * sin) + (vel.z * cos);
+        let sideVel = (vel.x * cos) - (vel.z * sin); // This is the variable that caused the error
+
+        if (keys.w) fwdVel += CONFIG.accel;
+        if (keys.s) fwdVel -= CONFIG.reverse;
+
+        if (Math.abs(fwdVel) > 0.1) {
+            const dir = fwdVel > 0 ? 1 : -1; 
+            if (keys.a) angle += CONFIG.turnSpeed * dir;
+            if (keys.d) angle -= CONFIG.turnSpeed * dir;
+        }
+
+        fwdVel *= CONFIG.drag;
+        
+        // Handbrake logic
+        const sideFriction = keys.space ? CONFIG.drift : CONFIG.grip;
+        sideVel *= sideFriction;
+
+        vel.x = (sin * fwdVel) + (cos * sideVel);
+        vel.z = (cos * fwdVel) - (sin * sideVel);
+
+        pos.x += vel.x;
+        pos.z += vel.z;
+
+        // --- 2. UPDATE VISUALS ---
+        
+        carGroup.position.set(pos.x, 0, pos.z);
+        carGroup.rotation.y = angle;
+
+        wheels.forEach(w => w.rotation.x += fwdVel * 0.1);
+
+        // Car Body Tilt (Structural Improvement: More pronounced visual lean)
+        carBody.rotation.z = -sideVel * CONFIG.tilt; 
+        carBody.rotation.x = -fwdVel * 0.005; 
+
+        // Brake Light Logic (Conceptual Feedback)
+        const isBraking = keys.s || (keys.space && Math.abs(fwdVel) > 0.5);
+        const targetMaterial = isBraking ? matBrakeOn : matTailOff;
+        
+        if (tlL && tlR && tlL.material !== targetMaterial) {
+            tlL.material = targetMaterial;
+            tlR.material = targetMaterial;
+        }
+
+        // Skidmarks and Smoke Generation (Conceptual Feedback)
+        const isDrifting = Math.abs(sideVel) > 0.5 || keys.space;
+
+        if (isDrifting) {
+            if(Math.abs(fwdVel) > 0.5) { 
+                const wheelOffset = 10.5;
+                // Rear Left Wheel Skidmark
+                addSkidmark(pos.x - Math.sin(angle + Math.PI/2) * wheelOffset, pos.z - Math.cos(angle + Math.PI/2) * wheelOffset, angle, sideVel);
+                // Rear Right Wheel Skidmark
+                addSkidmark(pos.x + Math.sin(angle + Math.PI/2) * wheelOffset, pos.z + Math.cos(angle + Math.PI/2) * wheelOffset, angle, sideVel);
+                
+                // FIXED: Passing sideVel as an argument to addSmokeParticle
+                addSmokeParticle(pos.x, pos.z, angle, sideVel);
+            }
+        }
+        updateSkidmarks();
+        updateSmokeParticles();
+
+        // Structural Improvement: Smoother Camera Follow
+        const camDist = 80;
+        const camHeight = 30;
+        
+        const targetX = pos.x - Math.sin(angle) * camDist;
+        const targetZ = pos.z - Math.cos(angle) * camDist;
+        
+        const smoothFactor = 0.08; 
+
+        camera.position.x += (targetX - camera.position.x) * smoothFactor;
+        camera.position.z += (targetZ - camera.position.z) * smoothFactor;
+        camera.position.y += (camHeight - camera.position.y) * smoothFactor;
+        camera.lookAt(pos.x, 0, pos.z);
+
+        // UI Updates (Conceptual Feedback)
+        const currentSpeed = Math.floor(Math.abs(fwdVel * 5));
+        const driftAngle = Math.floor(Math.abs(sideVel) * 20); // Scale the slide value for the UI
+        
+        document.getElementById('speed').innerText = `${currentSpeed} KM/H`;
+        document.getElementById('slide-val').innerText = `Slide: ${driftAngle.toFixed(0)}`;
+        
+        // Highlight the drift angle if actively drifting
+        const angleElement = document.getElementById('angle-value');
+        angleElement.innerText = `${driftAngle}°`;
+        angleElement.style.color = driftAngle > 10 ? '#ff4444' : '#ffcc00';
+
+
+        renderer.render(scene, camera);
+    }
+
+    function onResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Initialize the application
+    window.onload = init; 
+</script>
+</body>
+</html>
