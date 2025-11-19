@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake RL Agent with MCTS (GPU Accelerated)</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        .game-area {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        canvas {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            background: #1a1a2e;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 300px;
+        }
+        .stats {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .stat-value {
+            font-weight: bold;
+            color: #4ade80;
+        }
+        .gpu-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
+        }
+        .gpu-active {
+            background: #4ade80;
+            box-shadow: 0 0 10px #4ade80;
+        }
+        .gpu-inactive {
+            background: #ef4444;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #22d3ee);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        h1 {
+            text-align: center;
+            margin: 0 0 30px 0;
+            font-size: 32px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        .training-info {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 10px;
+        }
+        .gpu-status {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐍 Snake RL Agent with MCTS <span style="font-size: 16px;">(GPU Accelerated)</span></h1>
+        <div class="game-area">
+            <canvas id="gameCanvas" width="400" height="400"></canvas>
+            <div class="controls">
+                <div class="gpu-status" id="gpuStatus">
+                    <strong>GPU Status:</strong> <span id="gpuText">Initializing...</span>
+                    <span class="gpu-indicator gpu-inactive" id="gpuIndicator"></span>
+                </div>
+                
+                <div class="stats">
+                    <h3>Statistics</h3>
+                    <div class="stat-row">
+                        <span class="stat-label">Generation:</span>
+                        <span class="stat-value" id="generation">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Current Score:</span>
+                        <span class="stat-value" id="score">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Best Score:</span>
+                        <span class="stat-value" id="bestScore">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Avg Score (last 100):</span>
+                        <span class="stat-value" id="avgScore">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Epsilon (Exploration):</span>
+                        <span class="stat-value" id="epsilon">1.00</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Games/Second:</span>
+                        <span class="stat-value" id="gamesPerSec">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Total Moves:</span>
+                        <span class="stat-value" id="moves">0</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress"></div>
+                    </div>
+                </div>
+                
+                <h3>Learning Curve</h3>
+                <canvas id="chartCanvas" width="300" height="200"></canvas>
+                
+                <button id="trainBtn" onclick="toggleTraining()">Start Training</button>
+                <button id="visualBtn" onclick="toggleVisuals()">Disable Visuals (Faster)</button>
+                <button onclick="resetAgent()">Reset Agent</button>
+                <button onclick="agentPlay()">Agent Play</button>
+                
+                <div class="training-info">
+                    <strong>GPU Acceleration:</strong><br>
+                    Using WebGPU for neural network computations on your Mac's GPU. This enables much faster training with matrix operations computed in parallel on the GPU instead of CPU.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const GRID_SIZE = 20;
+        const CELL_SIZE = canvas.width / GRID_SIZE;
+        
+        let gpuDevice = null;
+        let gpuSupported = false;
+        
+        // Initialize WebGPU
+        async function initGPU() {
+            if (!navigator.gpu) {
+                document.getElementById('gpuText').textContent = 'WebGPU not supported (fallback to CPU)';
+                document.getElementById('gpuIndicator').className = 'gpu-indicator gpu-inactive';
+                return false;
+            }
+            
+            try {
+                const adapter = await navigator.gpu.requestAdapter();
+                if (!adapter) {
+                    throw new Error('No GPU adapter found');
+                }
+                
+                gpuDevice = await adapter.requestDevice();
+                document.getElementById('gpuText').textContent = `Active - ${adapter.name || 'GPU'}`;
+                document.getElementById('gpuIndicator').className = 'gpu-indicator gpu-active';
+                console.log('WebGPU initialized successfully');
+                return true;
+            } catch (error) {
+                console.error('WebGPU initialization failed:', error);
+                document.getElementById('gpuText').textContent = 'Failed (using CPU fallback)';
+                document.getElementById('gpuIndicator').className = 'gpu-indicator gpu-inactive';
+                return false;
+            }
+        }
+        
+        // Utility to deep copy matrix
+        function deepCopyMatrix(matrix) {
+            return matrix.map(row => row.slice());
+        }
+
+        function flattenMatrix(matrix) {
+            return matrix.flat();
+        }
+
+        function flattenVector(vector) {
+            return vector.map(row => row[0]);
+        }
+
+        function createGPUBuffer(device, data, usage) {
+            const buffer = device.createBuffer({
+                size: data.byteLength,
+                usage,
+                mappedAtCreation: true,
+            });
+            new data.constructor(buffer.getMappedRange()).set(data);
+            buffer.unmap();
+            return buffer;
+        }
+
+        // Shared utility functions
+        function deepCopyGame(state) {
+            let newGame = new SnakeGame();
+            newGame.snake = state.snake.map(s => ({x: s.x, y: s.y}));
+            newGame.direction = {x: state.direction.x, y: state.direction.y};
+            newGame.food = {x: state.food.x, y: state.food.y};
+            newGame.score = state.score;
+            newGame.gameOver = state.gameOver;
+            newGame.moves = state.moves;
+            newGame.movesWithoutFood = state.movesWithoutFood;
+            newGame.bodySet = new Set(state.bodySet);
+            return newGame;
+        }
+
+        function applyAction(simGame, action) {
+            let newDir = simGame.direction;
+            if (action === 1) {
+                newDir = simGame.direction.x !== 0 ? {x: 0, y: -simGame.direction.x} : {x: simGame.direction.y, y: 0};
+            } else if (action === 2) {
+                newDir = simGame.direction.x !== 0 ? {x: 0, y: simGame.direction.x} : {x: -simGame.direction.y, y: 0};
+            }
+            simGame.direction = newDir;
+            const head = simGame.snake[0];
+            const newHead = {x: head.x + newDir.x, y: head.y + newDir.y};
+            
+            if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE ||
+                simGame.bodySet.has(`${newHead.x},${newHead.y}`)) {
+                simGame.gameOver = true;
+                return;
+            }
+            
+            simGame.snake.unshift(newHead);
+            simGame.bodySet.add(`${newHead.x},${newHead.y}`);
+            simGame.moves++;
+            simGame.movesWithoutFood++;
+            
+            if (newHead.x === simGame.food.x && newHead.y === simGame.food.y) {
+                simGame.score++;
+                simGame.food = generateFood(simGame);
+                simGame.movesWithoutFood = 0;
+            } else {
+                const tail = simGame.snake.pop();
+                simGame.bodySet.delete(`${tail.x},${tail.y}`);
+            }
+            
+            if (simGame.movesWithoutFood > GRID_SIZE * GRID_SIZE) {
+                simGame.gameOver = true;
+            }
+        }
+
+        function generateFood(simGame) {
+            let food;
+            do {
+                food = {
+                    x: Math.floor(Math.random() * GRID_SIZE),
+                    y: Math.floor(Math.random() * GRID_SIZE)
+                };
+            } while (simGame.bodySet.has(`${food.x},${food.y}`));
+            return food;
+        }
+        
+        // GPU-Accelerated Neural Network with 2 hidden layers
+        class GPUNeuralNetwork {
+            constructor(inputSize, hidden1Size, hidden2Size, outputSize) {
+                this.inputSize = inputSize;
+                this.hidden1Size = hidden1Size;
+                this.hidden2Size = hidden2Size;
+                this.outputSize = outputSize;
+                this.useGPU = gpuSupported && gpuDevice;
+                
+                // Initialize weights and biases
+                this.weightsIH1 = this.randomMatrix(hidden1Size, inputSize);
+                this.weightsH1H2 = this.randomMatrix(hidden2Size, hidden1Size);
+                this.weightsH2O = this.randomMatrix(outputSize, hidden2Size);
+                this.biasH1 = this.randomMatrix(hidden1Size, 1);
+                this.biasH2 = this.randomMatrix(hidden2Size, 1);
+                this.biasO = this.randomMatrix(outputSize, 1);
+                
+                if (this.useGPU) {
+                    this.initGPUBuffers();
+                }
+            }
+            
+            randomMatrix(rows, cols) {
+                let matrix = [];
+                for (let i = 0; i < rows; i++) {
+                    matrix[i] = [];
+                    for (let j = 0; j < cols; j++) {
+                        matrix[i][j] = Math.random() * 2 - 1;
+                    }
+                }
+                return matrix;
+            }
+            
+            initGPUBuffers() {
+                const device = gpuDevice;
+                const storageUsage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
+                const uniformUsage = GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST;
+
+                // Weights and biases buffers
+                this.weightsIH1Buf = device.createBuffer({
+                    size: this.hidden1Size * this.inputSize * 4,
+                    usage: storageUsage,
+                });
+                this.biasH1Buf = device.createBuffer({
+                    size: this.hidden1Size * 4,
+                    usage: storageUsage,
+                });
+                this.weightsH1H2Buf = device.createBuffer({
+                    size: this.hidden2Size * this.hidden1Size * 4,
+                    usage: storageUsage,
+                });
+                this.biasH2Buf = device.createBuffer({
+                    size: this.hidden2Size * 4,
+                    usage: storageUsage,
+                });
+                this.weightsH2OBuf = device.createBuffer({
+                    size: this.outputSize * this.hidden2Size * 4,
+                    usage: storageUsage,
+                });
+                this.biasOBuf = device.createBuffer({
+                    size: this.outputSize * 4,
+                    usage: storageUsage,
+                });
+
+                // Temp buffers for layers
+                this.h1Buf = device.createBuffer({
+                    size: this.hidden1Size * 4,
+                    usage: storageUsage | GPUBufferUsage.COPY_SRC,
+                });
+                this.h2Buf = device.createBuffer({
+                    size: this.hidden2Size * 4,
+                    usage: storageUsage | GPUBufferUsage.COPY_SRC,
+                });
+                this.outBuf = device.createBuffer({
+                    size: this.outputSize * 4,
+                    usage: storageUsage | GPUBufferUsage.COPY_SRC,
+                });
+
+                // Readback buffer
+                this.readBuf = device.createBuffer({
+                    size: this.outputSize * 4,
+                    usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
+                });
+
+                // Shader for linear layer
+                const linearShaderCode = `
+struct Params {
+  inSize: u32,
+  outSize: u32,
+  hasSigmoid: u32,
+};
+@group(0) @binding(0) var<uniform> params: Params;
+@group(0) @binding(1) var<storage, read> weights: array<f32>;
+@group(0) @binding(2) var<storage, read> bias: array<f32>;
+@group(0) @binding(3) var<storage, read> inputBuf: array<f32>;
+@group(0) @binding(4) var<storage, read_write> outputBuf: array<f32>;
+fn sigmoid(x: f32) -> f32 {
+  return 1.0 / (1.0 + exp(-x));
+}
+@compute @workgroup_size(16)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+  if (gid.x >= params.outSize) { return; }
+  var sum: f32 = bias[gid.x];
+  for (var i: u32 = 0u; i < params.inSize; i = i + 1u) {
+    sum = sum + weights[gid.x * params.inSize + i] * inputBuf[i];
+  }
+  if (params.hasSigmoid == 1u) {
+    sum = sigmoid(sum);
+  }
+  outputBuf[gid.x] = sum;
+}
+                `;
+                const module = device.createShaderModule({ code: linearShaderCode });
+                this.linearPipeline = device.createComputePipeline({
+                    layout: 'auto',
+                    compute: {
+                        module,
+                        entryPoint: 'main',
+                    },
+                });
+
+                // Params buffers for each layer
+                this.paramsH1Buf = device.createBuffer({
+                    size: 12, // 3 u32 * 4
+                    usage: uniformUsage,
+                });
+                device.queue.writeBuffer(this.paramsH1Buf, 0, new Uint32Array([this.inputSize, this.hidden1Size, 1]));
+
+                this.paramsH2Buf = device.createBuffer({
+                    size: 12,
+                    usage: uniformUsage,
+                });
+                device.queue.writeBuffer(this.paramsH2Buf, 0, new Uint32Array([this.hidden1Size, this.hidden2Size, 1]));
+
+                this.paramsOBuf = device.createBuffer({
+                    size: 12,
+                    usage: uniformUsage,
+                });
+                device.queue.writeBuffer(this.paramsOBuf, 0, new Uint32Array([this.hidden2Size, this.outputSize, 0]));
+
+                this.uploadWeights();
+            }
+
+            uploadWeights() {
+                const device = gpuDevice;
+                device.queue.writeBuffer(this.weightsIH1Buf, 0, new Float32Array(flattenMatrix(this.weightsIH1)));
+                device.queue.writeBuffer(this.biasH1Buf, 0, new Float32Array(flattenVector(this.biasH1)));
+                device.queue.writeBuffer(this.weightsH1H2Buf, 0, new Float32Array(flattenMatrix(this.weightsH1H2)));
+                device.queue.writeBuffer(this.biasH2Buf, 0, new Float32Array(flattenVector(this.biasH2)));
+                device.queue.writeBuffer(this.weightsH2OBuf, 0, new Float32Array(flattenMatrix(this.weightsH2O)));
+                device.queue.writeBuffer(this.biasOBuf, 0, new Float32Array(flattenVector(this.biasO)));
+            }
+            
+            sigmoid(x) {
+                return 1 / (1 + Math.exp(-Math.max(-500, Math.min(500, x))));
+            }
+            
+            async predict(inputArray) {
+                if (this.useGPU) {
+                    return await this.predictGPU(inputArray);
+                }
+                return this.predictCPU(inputArray);
+            }
+            
+            predictCPU(inputArray) {
+                // Hidden 1
+                let h1 = this.matrixMultiply(this.weightsIH1, inputArray);
+                h1 = this.matrixAdd(h1, this.biasH1);
+                let h1Activated = h1.map(row => row.map(x => this.sigmoid(x)));
+                
+                // Hidden 2
+                let h2 = this.matrixMultiply(this.weightsH1H2, h1Activated);
+                h2 = this.matrixAdd(h2, this.biasH2);
+                let h2Activated = h2.map(row => row.map(x => this.sigmoid(x)));
+                
+                // Output
+                let output = this.matrixMultiply(this.weightsH2O, h2Activated);
+                output = this.matrixAdd(output, this.biasO);
+                return output.map(row => row[0]);
+            }
+            
+            async predictGPU(inputArray) {
+                const device = gpuDevice;
+                const inputData = new Float32Array(flattenVector(inputArray));
+                const inputBuf = device.createBuffer({
+                    size: inputData.byteLength,
+                    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+                });
+                device.queue.writeBuffer(inputBuf, 0, inputData);
+
+                const commandEncoder = device.createCommandEncoder();
+
+                // Layer 1
+                const bindGroup1 = device.createBindGroup({
+                    layout: this.linearPipeline.getBindGroupLayout(0),
+                    entries: [
+                        { binding: 0, resource: { buffer: this.paramsH1Buf } },
+                        { binding: 1, resource: { buffer: this.weightsIH1Buf } },
+                        { binding: 2, resource: { buffer: this.biasH1Buf } },
+                        { binding: 3, resource: { buffer: inputBuf } },
+                        { binding: 4, resource: { buffer: this.h1Buf } },
+                    ],
+                });
+                const pass1 = commandEncoder.beginComputePass();
+                pass1.setPipeline(this.linearPipeline);
+                pass1.setBindGroup(0, bindGroup1);
+                pass1.dispatchWorkgroups(Math.ceil(this.hidden1Size / 16));
+                pass1.end();
+
+                // Layer 2
+                const bindGroup2 = device.createBindGroup({
+                    layout: this.linearPipeline.getBindGroupLayout(0),
+                    entries: [
+                        { binding: 0, resource: { buffer: this.paramsH2Buf } },
+                        { binding: 1, resource: { buffer: this.weightsH1H2Buf } },
+                        { binding: 2, resource: { buffer: this.biasH2Buf } },
+                        { binding: 3, resource: { buffer: this.h1Buf } },
+                        { binding: 4, resource: { buffer: this.h2Buf } },
+                    ],
+                });
+                const pass2 = commandEncoder.beginComputePass();
+                pass2.setPipeline(this.linearPipeline);
+                pass2.setBindGroup(0, bindGroup2);
+                pass2.dispatchWorkgroups(Math.ceil(this.hidden2Size / 16));
+                pass2.end();
+
+                // Output layer
+                const bindGroupO = device.createBindGroup({
+                    layout: this.linearPipeline.getBindGroupLayout(0),
+                    entries: [
+                        { binding: 0, resource: { buffer: this.paramsOBuf } },
+                        { binding: 1, resource: { buffer: this.weightsH2OBuf } },
+                        { binding: 2, resource: { buffer: this.biasOBuf } },
+                        { binding: 3, resource: { buffer: this.h2Buf } },
+                        { binding: 4, resource: { buffer: this.outBuf } },
+                    ],
+                });
+                const passO = commandEncoder.beginComputePass();
+                passO.setPipeline(this.linearPipeline);
+                passO.setBindGroup(0, bindGroupO);
+                passO.dispatchWorkgroups(Math.ceil(this.outputSize / 16));
+                passO.end();
+
+                // Copy to readBuf
+                commandEncoder.copyBufferToBuffer(this.outBuf, 0, this.readBuf, 0, this.outputSize * 4);
+
+                device.queue.submit([commandEncoder.finish()]);
+
+                await this.readBuf.mapAsync(GPUMapMode.READ);
+                const resultArray = new Float32Array(this.readBuf.getMappedRange()).slice();
+                this.readBuf.unmap();
+
+                inputBuf.destroy(); // Clean up
+
+                return Array.from(resultArray);
+            }
+            
+            matrixMultiply(a, b) {
+                let result = [];
+                for (let i = 0; i < a.length; i++) {
+                    result[i] = [0];
+                    for (let j = 0; j < b.length; j++) {
+                        result[i][0] += a[i][j] * b[j][0];
+                    }
+                }
+                return result;
+            }
+            
+            matrixAdd(a, b) {
+                return a.map((row, i) => row.map((val, j) => val + b[i][j]));
+            }
+            
+            train(inputArray, targetArray, learningRate) {
+                // Forward pass
+                let h1 = this.matrixMultiply(this.weightsIH1, inputArray);
+                h1 = this.matrixAdd(h1, this.biasH1);
+                let h1Activated = h1.map(row => row.map(x => this.sigmoid(x)));
+                
+                let h2 = this.matrixMultiply(this.weightsH1H2, h1Activated);
+                h2 = this.matrixAdd(h2, this.biasH2);
+                let h2Activated = h2.map(row => row.map(x => this.sigmoid(x)));
+                
+                let output = this.matrixMultiply(this.weightsH2O, h2Activated);
+                output = this.matrixAdd(output, this.biasO);
+                let outputActivated = output.map(row => row);
+                
+                // Output error
+                let outputError = targetArray.map((val, i) => [[val - outputActivated[i][0]]]);
+                
+                // Update H2O and biasO
+                for (let i = 0; i < this.outputSize; i++) {
+                    for (let j = 0; j < this.hidden2Size; j++) {
+                        let gradient = outputError[i][0][0] * h2Activated[j][0];
+                        this.weightsH2O[i][j] += learningRate * gradient;
+                    }
+                    this.biasO[i][0] += learningRate * outputError[i][0][0];
+                }
+                
+                // Hidden 2 error
+                let h2Error = [];
+                for (let i = 0; i < this.hidden2Size; i++) {
+                    let error = 0;
+                    for (let j = 0; j < this.outputSize; j++) {
+                        error += outputError[j][0][0] * this.weightsH2O[j][i];
+                    }
+                    h2Error.push([[error * h2Activated[i][0] * (1 - h2Activated[i][0])]]);
+                }
+                
+                // Update H1H2 and biasH2
+                for (let i = 0; i < this.hidden2Size; i++) {
+                    for (let j = 0; j < this.hidden1Size; j++) {
+                        let gradient = h2Error[i][0][0] * h1Activated[j][0];
+                        this.weightsH1H2[i][j] += learningRate * gradient;
+                    }
+                    this.biasH2[i][0] += learningRate * h2Error[i][0][0];
+                }
+                
+                // Hidden 1 error
+                let h1Error = [];
+                for (let i = 0; i < this.hidden1Size; i++) {
+                    let error = 0;
+                    for (let j = 0; j < this.hidden2Size; j++) {
+                        error += h2Error[j][0][0] * this.weightsH1H2[j][i];
+                    }
+                    h1Error.push([[error * h1Activated[i][0] * (1 - h1Activated[i][0])]]);
+                }
+                
+                // Update IH1 and biasH1
+                for (let i = 0; i < this.hidden1Size; i++) {
+                    for (let j = 0; j < this.inputSize; j++) {
+                        let gradient = h1Error[i][0][0] * inputArray[j][0];
+                        this.weightsIH1[i][j] += learningRate * gradient;
+                    }
+                    this.biasH1[i][0] += learningRate * h1Error[i][0][0];
+                }
+
+                if (this.useGPU) {
+                    this.uploadWeights();
+                }
+            }
+            
+            copyFrom(other) {
+                this.weightsIH1 = deepCopyMatrix(other.weightsIH1);
+                this.weightsH1H2 = deepCopyMatrix(other.weightsH1H2);
+                this.weightsH2O = deepCopyMatrix(other.weightsH2O);
+                this.biasH1 = deepCopyMatrix(other.biasH1);
+                this.biasH2 = deepCopyMatrix(other.biasH2);
+                this.biasO = deepCopyMatrix(other.biasO);
+                if (this.useGPU) {
+                    this.uploadWeights();
+                }
+            }
+        }
+        
+        // MCTS Node
+        class MCTSNode {
+            constructor(state, parent = null, action = null) {
+                this.state = state; // SnakeGame instance
+                this.parent = parent;
+                this.action = action;
+                this.children = [];
+                this.visits = 0;
+                this.value = 0; // Cumulative value (score)
+            }
+        }
+        
+        // Basic MCTS for Snake
+        class MCTS {
+            constructor(game, simulations = 100, rolloutMaxSteps = 100, c = 1.414, brain = null) {
+                this.game = game;
+                this.simulations = simulations;
+                this.rolloutMaxSteps = Math.min(rolloutMaxSteps, GRID_SIZE * GRID_SIZE - game.snake.length);
+                this.c = c; // Exploration constant
+                this.brain = brain; // Set to null for random rollouts to speed up
+            }
+            
+            async search(root) {
+                for (let i = 0; i < this.simulations; i++) {
+                    let node = this.select(root);
+                    let value = await this.simulate(node);
+                    this.backpropagate(node, value);
+                }
+                
+                return this.bestChild(root).action;
+            }
+            
+            select(node) {
+                while (node.children.length > 0) {
+                    node = this.bestUCTChild(node);
+                }
+                if (node.visits === 0 && node.state.gameOver) return node; // Terminal
+                this.expand(node);
+                return node.children[0] || node; // New child or node if no expansion
+            }
+            
+            expand(node) {
+                const actions = [0, 1, 2]; // Straight, left, right
+                for (const action of actions) {
+                    const newGame = deepCopyGame(node.state);
+                    applyAction(newGame, action);
+                    node.children.push(new MCTSNode(newGame, node, action));
+                }
+            }
+            
+            async simulate(node) {
+                let simGame = deepCopyGame(node.state);
+                let steps = 0;
+                while (!simGame.gameOver && steps < this.rolloutMaxSteps) {
+                    let action;
+                    if (this.brain) {
+                        const state = simGame.getState();
+                        const prediction = await this.brain.predict(state);
+                        action = prediction.indexOf(Math.max(...prediction));
+                    } else {
+                        action = Math.floor(Math.random() * 3); // Random move
+                    }
+                    applyAction(simGame, action);
+                    steps++;
+                }
+                return simGame.score; // Value = final score
+            }
+            
+            backpropagate(node, value) {
+                while (node) {
+                    node.visits++;
+                    node.value += value;
+                    node = node.parent;
+                }
+            }
+            
+            bestUCTChild(node) {
+                let best = null;
+                let bestScore = -Infinity;
+                for (const child of node.children) {
+                    let uct;
+                    if (child.visits === 0) {
+                        uct = Infinity;
+                    } else {
+                        uct = (child.value / child.visits) + this.c * Math.sqrt(Math.log(node.visits) / child.visits);
+                    }
+                    if (uct > bestScore) {
+                        bestScore = uct;
+                        best = child;
+                    }
+                }
+                return best;
+            }
+            
+            bestChild(node) {
+                let best = null;
+                let bestVisits = -Infinity;
+                for (const child of node.children) {
+                    if (child.visits > bestVisits) {
+                        bestVisits = child.visits;
+                        best = child;
+                    }
+                }
+                return best;
+            }
+        }
+        
+        // Snake Game
+        class SnakeGame {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.snake = [{x: 10, y: 10}];
+                this.bodySet = new Set([`10,10`]);
+                this.direction = {x: 1, y: 0};
+                this.food = this.generateFood();
+                this.score = 0;
+                this.gameOver = false;
+                this.moves = 0;
+                this.movesWithoutFood = 0;
+            }
+            
+            generateFood() {
+                let food;
+                do {
+                    food = {
+                        x: Math.floor(Math.random() * GRID_SIZE),
+                        y: Math.floor(Math.random() * GRID_SIZE)
+                    };
+                } while (this.bodySet.has(`${food.x},${food.y}`));
+                return food;
+            }
+            
+            setDirection(dir) {
+                if (dir.x === -this.direction.x && dir.y === -this.direction.y) return;
+                this.direction = dir;
+            }
+            
+            update() {
+                if (this.gameOver) return;
+                
+                const head = this.snake[0];
+                const oldDist = Math.abs(head.x - this.food.x) + Math.abs(head.y - this.food.y);
+                
+                const newHead = {
+                    x: head.x + this.direction.x,
+                    y: head.y + this.direction.y
+                };
+                
+                if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE ||
+                    this.bodySet.has(`${newHead.x},${newHead.y}`)) {
+                    this.gameOver = true;
+                    return -10;
+                }
+                
+                this.snake.unshift(newHead);
+                this.bodySet.add(`${newHead.x},${newHead.y}`);
+                this.moves++;
+                this.movesWithoutFood++;
+                
+                let reward = -0.001;
+                
+                if (newHead.x === this.food.x && newHead.y === this.food.y) {
+                    this.score++;
+                    this.food = this.generateFood();
+                    this.movesWithoutFood = 0;
+                    reward += 10;
+                } else {
+                    const tail = this.snake.pop();
+                    this.bodySet.delete(`${tail.x},${tail.y}`);
+                    const newDist = Math.abs(newHead.x - this.food.x) + Math.abs(newHead.y - this.food.y);
+                    reward += (oldDist - newDist) * 0.05;
+                }
+                
+                if (this.movesWithoutFood > GRID_SIZE * GRID_SIZE) {
+                    this.gameOver = true;
+                    reward -= 10;
+                }
+                
+                return reward;
+            }
+            
+            getState() {
+                const head = this.snake[0];
+                const tail = this.snake[this.snake.length - 1] || head;
+                
+                const dangerStraight = this.isDanger({x: head.x + this.direction.x, y: head.y + this.direction.y});
+                const dangerLeft = this.direction.x !== 0 ? 
+                    this.isDanger({x: head.x, y: head.y - this.direction.x}) :
+                    this.isDanger({x: head.x + this.direction.y, y: head.y});
+                const dangerRight = this.direction.x !== 0 ? 
+                    this.isDanger({x: head.x, y: head.y + this.direction.x}) :
+                    this.isDanger({x: head.x - this.direction.y, y: head.y});
+                
+                const foodLeft = this.food.x < head.x ? 1 : 0;
+                const foodRight = this.food.x > head.x ? 1 : 0;
+                const foodUp = this.food.y < head.y ? 1 : 0;
+                const foodDown = this.food.y > head.y ? 1 : 0;
+                
+                const tailLeft = tail.x < head.x ? 1 : 0;
+                const tailRight = tail.x > head.x ? 1 : 0;
+                const tailUp = tail.y < head.y ? 1 : 0;
+                const tailDown = tail.y > head.y ? 1 : 0;
+                
+                const dirLeft = this.direction.x === -1 ? 1 : 0;
+                const dirRight = this.direction.x === 1 ? 1 : 0;
+                const dirUp = this.direction.y === -1 ? 1 : 0;
+                const dirDown = this.direction.y === 1 ? 1 : 0;
+                
+                return [
+                    [dangerStraight ? 1 : 0],
+                    [dangerLeft ? 1 : 0],
+                    [dangerRight ? 1 : 0],
+                    [foodLeft], [foodRight], [foodUp], [foodDown],
+                    [tailLeft], [tailRight], [tailUp], [tailDown],
+                    [dirLeft], [dirRight], [dirUp], [dirDown]
+                ];
+            }
+            
+            isDanger(pos) {
+                return pos.x < 0 || pos.x >= GRID_SIZE || pos.y < 0 || pos.y >= GRID_SIZE ||
+                       this.bodySet.has(`${pos.x},${pos.y}`);
+            }
+            
+            draw() {
+                ctx.fillStyle = '#1a1a2e';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                for (let i = 0; i <= GRID_SIZE; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(i * CELL_SIZE, 0);
+                    ctx.lineTo(i * CELL_SIZE, canvas.height);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(0, i * CELL_SIZE);
+                    ctx.lineTo(canvas.width, i * CELL_SIZE);
+                    ctx.stroke();
+                }
+                
+                this.snake.forEach((segment, index) => {
+                    const gradient = ctx.createLinearGradient(
+                        segment.x * CELL_SIZE, segment.y * CELL_SIZE,
+                        (segment.x + 1) * CELL_SIZE, (segment.y + 1) * CELL_SIZE
+                    );
+                    if (index === 0) {
+                        gradient.addColorStop(0, '#4ade80');
+                        gradient.addColorStop(1, '#22d3ee');
+                    } else {
+                        gradient.addColorStop(0, '#10b981');
+                        gradient.addColorStop(1, '#06b6d4');
+                    }
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(
+                        segment.x * CELL_SIZE + 2,
+                        segment.y * CELL_SIZE + 2,
+                        CELL_SIZE - 4,
+                        CELL_SIZE - 4
+                    );
+                });
+                
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.arc(
+                    this.food.x * CELL_SIZE + CELL_SIZE / 2,
+                    this.food.y * CELL_SIZE + CELL_SIZE / 2,
+                    CELL_SIZE / 2 - 2,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+            }
+        }
+        
+        // RL Agent with MCTS hybrid
+        class RLAgent {
+            constructor() {
+                this.brain = new GPUNeuralNetwork(15, 16, 16, 3); // 2 layers 16x16
+                this.targetBrain = new GPUNeuralNetwork(15, 16, 16, 3);
+                this.targetBrain.copyFrom(this.brain);
+                this.replayBuffer = [];
+                this.replayCapacity = 10000;
+                this.batchSize = 8;
+                this.updateTargetEvery = 100;
+                this.stepCount = 0;
+                this.learnEvery = 4;
+                this.epsilon = 1.0;
+                this.epsilonMin = 0.05;
+                this.epsilonDecay = 0.999;
+                this.learningRate = 0.002;
+                this.gamma = 0.99;
+                this.mctsThreshold = 40; // Increased for optimization
+                this.mctsSims = 50; // Decreased for optimization
+                this.mctsRoot = null; // For tree reuse
+            }
+            
+            async getAction(state) {
+                if (Math.random() < this.epsilon) {
+                    return Math.floor(Math.random() * 3);
+                }
+                
+                if (game.snake.length > this.mctsThreshold) {
+                    let root = this.mctsRoot;
+                    if (!root || !this.stateEquals(root.state, game)) {
+                        root = new MCTSNode(deepCopyGame(game));
+                        this.mctsRoot = root;
+                    }
+                    const mcts = new MCTS(game, this.mctsSims, 100, 1.414, this.brain);
+                    return await mcts.search(root);
+                }
+                
+                const prediction = await this.brain.predict(state);
+                return prediction.indexOf(Math.max(...prediction));
+            }
+            
+            addToReplay(state, action, reward, nextState, done) {
+                this.replayBuffer.push({state, action, reward, nextState, done});
+                if (this.replayBuffer.length > this.replayCapacity) {
+                    this.replayBuffer.shift();
+                }
+            }
+            
+            async learn() {
+                if (this.replayBuffer.length < this.batchSize) return;
+                
+                const batch = [];
+                for (let i = 0; i < this.batchSize; i++) {
+                    const idx = Math.floor(Math.random() * this.replayBuffer.length);
+                    batch.push(this.replayBuffer[idx]);
+                }
+                
+                for (const sample of batch) {
+                    const currentQ = await this.brain.predict(sample.state);
+                    const nextQ = await this.targetBrain.predict(sample.nextState);
+                    const maxNextQ = sample.done ? 0 : Math.max(...nextQ);
+                    
+                    const target = [...currentQ];
+                    target[sample.action] = sample.reward + this.gamma * maxNextQ;
+                    
+                    this.brain.train(sample.state, target, this.learningRate);
+                }
+                
+                this.stepCount++;
+                if (this.stepCount % this.updateTargetEvery === 0) {
+                    this.targetBrain.copyFrom(this.brain);
+                }
+                
+                if (this.epsilon > this.epsilonMin) {
+                    this.epsilon *= this.epsilonDecay;
+                }
+            }
+
+            stateEquals(stateA, stateB) {
+                if (stateA.direction.x !== stateB.direction.x || stateA.direction.y !== stateB.direction.y) return false;
+                if (stateA.food.x !== stateB.food.x || stateA.food.y !== stateB.food.y) return false;
+                if (stateA.snake.length !== stateB.snake.length) return false;
+                for (let i = 0; i < stateA.snake.length; i++) {
+                    if (stateA.snake[i].x !== stateB.snake[i].x || stateA.snake[i].y !== stateB.snake[i].y) return false;
+                }
+                return true;
+            }
+
+            updateMCTSRoot(action, currentGame) {
+                if (!this.mctsRoot) return;
+                const candidate = this.mctsRoot.children.find(child => child.action === action);
+                if (candidate && this.stateEquals(candidate.state, currentGame)) {
+                    this.mctsRoot = candidate;
+                    this.mctsRoot.parent = null;  // Detach from old tree to avoid memory leaks
+                } else {
+                    this.mctsRoot = null;  // Reset if states don't match (e.g., food randomized differently)
+                }
+            }
+        }
+        
+        // Game state
+        let game = new SnakeGame();
+        let agent = new RLAgent();
+        let generation = 0;
+        let bestScore = 0;
+        let recentScores = [];
+        let learningCurve = [];
+        let lastChartUpdateGen = 0;
+        let isTraining = false;
+        let isManual = false;
+        let gamesCompleted = 0;
+        let lastGamesCount = 0;
+        let lastTime = Date.now();
+        let visualsEnabled = true;
+        let visualUpdateInterval = null;
+        
+        async function toggleTraining() {
+            isTraining = !isTraining;
+            isManual = false;
+            document.getElementById('trainBtn').textContent = isTraining ? 'Stop Training' : 'Start Training';
+            
+            if (isTraining) {
+                if (visualsEnabled) {
+                    trainLoop();
+                } else {
+                    fastTrainLoop();
+                }
+            } else {
+                if (visualUpdateInterval) {
+                    clearInterval(visualUpdateInterval);
+                    visualUpdateInterval = null;
+                }
+            }
+        }
+        
+        function toggleVisuals() {
+            visualsEnabled = !visualsEnabled;
+            const btn = document.getElementById('visualBtn');
+            btn.textContent = visualsEnabled ? 'Disable Visuals (Faster)' : 'Enable Visuals';
+            
+            if (isTraining) {
+                toggleTraining();
+                setTimeout(() => toggleTraining(), 100);
+            }
+        }
+        
+        async function fastTrainLoop() {
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#4ade80';
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Training in Fast Mode...', canvas.width / 2, canvas.height / 2);
+            ctx.font = '14px Arial';
+            ctx.fillText('Visuals disabled for maximum speed', canvas.width / 2, canvas.height / 2 + 30);
+            
+            visualUpdateInterval = setInterval(updateStats, 100);
+            
+            while (isTraining) {
+                for (let i = 0; i < 20; i++) {
+                    if (!isTraining) break;
+                    
+                    let localStep = 0;
+                    while (!game.gameOver && isTraining) {
+                        const state = game.getState();
+                        const action = await agent.getAction(state);
+                        
+                        let newDir = game.direction;
+                        if (action === 1) {
+                            newDir = game.direction.x !== 0 ? {x: 0, y: -game.direction.x} : {x: game.direction.y, y: 0};
+                        } else if (action === 2) {
+                            newDir = game.direction.x !== 0 ? {x: 0, y: game.direction.x} : {x: -game.direction.y, y: 0};
+                        }
+                        game.setDirection(newDir);
+                        
+                        const reward = game.update();
+                        if (game.snake.length > agent.mctsThreshold) {
+                            agent.updateMCTSRoot(action, game);
+                        }
+                        const nextState = game.getState();
+                        const done = game.gameOver;
+                        agent.addToReplay(state, action, reward, nextState, done);
+                        localStep++;
+                        if (localStep % agent.learnEvery === 0) {
+                            await agent.learn();
+                        }
+                    }
+                    
+                    if (game.gameOver) {
+                        generation++;
+                        gamesCompleted++;
+                        recentScores.push(game.score);
+                        if (recentScores.length > 100) recentScores.shift();
+                        if (game.score > bestScore) bestScore = game.score;
+                        const avg = recentScores.length > 0 ? recentScores.reduce((a, b) => a + b, 0) / recentScores.length : 0;
+                        if (generation % 100 === 0) {
+                            learningCurve.push(avg);
+                        }
+                        game.reset();
+                    }
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+        }
+        
+        async function trainLoop() {
+            if (!isTraining) return;
+            
+            const state = game.getState();
+            const action = await agent.getAction(state);
+            
+            let newDir = game.direction;
+            if (action === 1) {
+                newDir = game.direction.x !== 0 ? {x: 0, y: -game.direction.x} : {x: game.direction.y, y: 0};
+            } else if (action === 2) {
+                newDir = game.direction.x !== 0 ? {x: 0, y: game.direction.x} : {x: -game.direction.y, y: 0};
+            }
+            game.setDirection(newDir);
+            
+            const reward = game.update();
+            if (game.snake.length > agent.mctsThreshold) {
+                agent.updateMCTSRoot(action, game);
+            }
+            const nextState = game.getState();
+            const done = game.gameOver;
+            
+            agent.addToReplay(state, action, reward, nextState, done);
+            agent.stepCount++;
+            if (agent.stepCount % agent.learnEvery === 0) {
+                await agent.learn();
+            }
+            
+            if (visualsEnabled) {
+                game.draw();
+            }
+            updateStats();
+            
+            if (game.gameOver) {
+                generation++;
+                gamesCompleted++;
+                recentScores.push(game.score);
+                if (recentScores.length > 100) recentScores.shift();
+                if (game.score > bestScore) bestScore = game.score;
+                const avg = recentScores.length > 0 ? recentScores.reduce((a, b) => a + b, 0) / recentScores.length : 0;
+                if (generation % 100 === 0) {
+                    learningCurve.push(avg);
+                }
+                game.reset();
+            }
+            
+            requestAnimationFrame(trainLoop);
+        }
+        
+        function agentPlay() {
+            isTraining = false;
+            isManual = false;
+            document.getElementById('trainBtn').textContent = 'Start Training';
+            if (visualUpdateInterval) {
+                clearInterval(visualUpdateInterval);
+                visualUpdateInterval = null;
+            }
+            game.reset();
+            agentPlayLoop();
+        }
+        
+        async function agentPlayLoop() {
+            if (isTraining || isManual) return;
+            
+            const state = game.getState();
+            const action = await agent.getAction(state);
+            
+            let newDir = game.direction;
+            if (action === 1) {
+                newDir = game.direction.x !== 0 ? 
+                    {x: 0, y: -game.direction.x} : 
+                    {x: game.direction.y, y: 0};
+            } else if (action === 2) {
+                newDir = game.direction.x !== 0 ? 
+                    {x: 0, y: game.direction.x} : 
+                    {x: -game.direction.y, y: 0};
+            }
+            game.setDirection(newDir);
+            
+            game.update();
+            if (game.snake.length > agent.mctsThreshold) {
+                agent.updateMCTSRoot(action, game);
+            }
+            game.draw();
+            updateStats();
+            
+            if (game.gameOver) {
+                alert(`Game Over! Score: ${game.score}`);
+                return;
+            }
+            
+            setTimeout(() => requestAnimationFrame(agentPlayLoop), 100);
+        }
+        
+        function resetAgent() {
+            agent = new RLAgent();
+            generation = 0;
+            bestScore = 0;
+            recentScores = [];
+            learningCurve = [];
+            lastChartUpdateGen = 0;
+            gamesCompleted = 0;
+            game.reset();
+            updateStats();
+            alert('Agent reset! Training data cleared.');
+        }
+        
+        function updateStats() {
+            document.getElementById('generation').textContent = generation;
+            document.getElementById('score').textContent = game.score;
+            document.getElementById('bestScore').textContent = bestScore;
+            document.getElementById('epsilon').textContent = agent.epsilon.toFixed(2);
+            document.getElementById('moves').textContent = game.moves;
+            
+            const avgScore = recentScores.length > 0 ? 
+                (recentScores.reduce((a, b) => a + b, 0) / recentScores.length).toFixed(1) : 0;
+            document.getElementById('avgScore').textContent = avgScore;
+            
+            const now = Date.now();
+            if (now - lastTime >= 1000) {
+                const gamesPerSec = gamesCompleted - lastGamesCount;
+                document.getElementById('gamesPerSec').textContent = gamesPerSec;
+                lastGamesCount = gamesCompleted;
+                lastTime = now;
+            }
+            
+            const progress = Math.min((bestScore / 50) * 100, 100);
+            document.getElementById('progress').style.width = progress + '%';
+            
+            if (generation !== lastChartUpdateGen && generation % 100 === 0) {
+                drawChart();
+                lastChartUpdateGen = generation;
+            }
+        }
+        
+        function drawChart() {
+            const chartCanvas = document.getElementById('chartCanvas');
+            const chartCtx = chartCanvas.getContext('2d');
+            chartCtx.fillStyle = '#1a1a2e';
+            chartCtx.fillRect(0, 0, chartCanvas.width, chartCanvas.height);
+            
+            if (learningCurve.length < 2) return;
+            
+            const maxScore = Math.max(...learningCurve);
+            const minScore = Math.min(...learningCurve);
+            const range = maxScore - minScore || 1;
+            
+            chartCtx.strokeStyle = '#4ade80';
+            chartCtx.lineWidth = 2;
+            chartCtx.beginPath();
+            chartCtx.moveTo(0, chartCanvas.height - ((learningCurve[0] - minScore) / range * chartCanvas.height));
+            
+            for (let i = 1; i < learningCurve.length; i++) {
+                const x = (i / (learningCurve.length - 1)) * chartCanvas.width;
+                const y = chartCanvas.height - ((learningCurve[i] - minScore) / range * chartCanvas.height);
+                chartCtx.lineTo(x, y);
+            }
+            
+            chartCtx.stroke();
+        }
+        
+        document.addEventListener('keydown', (e) => {
+            if (!isManual) return;
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                    game.setDirection({x: 0, y: -1});
+                    break;
+                case 'ArrowDown':
+                    game.setDirection({x: 0, y: 1});
+                    break;
+                case 'ArrowLeft':
+                    game.setDirection({x: -1, y: 0});
+                    break;
+                case 'ArrowRight':
+                    game.setDirection({x: 1, y: 0});
+                    break;
+            }
+        });
+        
+        // Initialize
+        (async () => {
+            gpuSupported = await initGPU();
+            game.draw();
+            updateStats();
+        })();
+    </script>
+</body>
+</html>
