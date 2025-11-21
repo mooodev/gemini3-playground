@@ -3,370 +3,458 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Портфолио Ани — 100х Лучший Веб-Дизайнер</title>
-    <!-- Загрузка Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <title>Connect - Travel Agency</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Пользовательские стили для резкого, высококонтрастного вида */
+        /* === СБРОС СТИЛЕЙ И БАЗА === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7f9fb; /* Светлый фон для контраста */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
         }
-        /* Цветовая палитра: Темный Угольный/Синий, Яркий Бирюзовый Акцент */
-        .header-bg {
-            background-color: #1a202c; /* Темный Угольный */
+
+        a {
+            text-decoration: none;
+            color: inherit;
         }
-        .accent-cta {
-            background-color: #00bcd4; /* Яркий Бирюзовый */
-            color: #ffffff;
-            transition: background-color 0.3s;
+
+        ul {
+            list-style: none;
         }
-        .accent-cta:hover {
-            background-color: #00a0b2;
-            box-shadow: 0 4px 15px rgba(0, 188, 212, 0.4);
+
+        /* === ШАПКА (HEADER) === */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 5%;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        /* Логика липкого заголовка */
-        .sticky-header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 50;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            color: #003366;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        /* Простая анимация на основе скролла для проектов */
-        .feature-card {
-            transition: transform 0.3s, box-shadow 0.3s;
+        
+        .logo i {
+            font-size: 20px;
         }
-        .feature-card:hover {
+
+        nav ul {
+            display: flex;
+            gap: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #777;
+            text-transform: uppercase;
+        }
+        
+        .search-icon {
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        /* === ГЕРОЙ (HERO SECTION) === */
+        .hero {
+            /* Градиент как на макете: от голубого к персиковому */
+            background: linear-gradient(90deg, #89CFF0 0%, #F4C2C2 100%);
+            padding: 60px 5% 100px 5%; /* Большой отступ снизу для карточек */
+            text-align: center;
+        }
+
+        .hero h1 {
+            color: #fff;
+            font-size: 36px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 40px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Карточки категорий */
+        .categories {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .cat-card {
+            background: #fff;
+            border-radius: 15px;
+            width: 140px;
+            height: 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+            cursor: pointer;
+        }
+
+        .cat-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .icon-box {
+            width: 100%;
+            height: 100px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 15px;
+            color: #fff;
+            font-size: 40px;
+        }
+
+        /* Цвета для каждой карточки */
+        .bg-winter { background-color: #5DADE2; }
+        .bg-summer { background-color: #F4D03F; }
+        .bg-active { background-color: #F5B041; }
+        .bg-romance { background-color: #EC7063; }
+        .bg-relax { background-color: #AED6F1; }
+        .bg-luxury { background-color: #6C3483; }
+
+        .cat-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+            color: #555;
+            text-transform: uppercase;
+            line-height: 1.4;
+        }
+
+        /* === СЕКЦИЯ FEATURED (СЛАЙДЕР) === */
+        .featured-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+            position: relative;
+        }
+
+        .featured-wrapper {
+            position: relative;
+            width: 100%;
+            height: 450px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .slide-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        /* Оверлей с текстом по центру */
+        .featured-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 30px 50px;
+            text-align: center;
+            border-radius: 5px;
+            backdrop-filter: blur(5px);
+            min-width: 400px;
+        }
+
+        .featured-overlay h3 {
+            font-size: 14px;
+            color: #555;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .featured-overlay h2 {
+            font-size: 28px;
+            color: #222;
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        /* Стрелки слайдера */
+        .arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(255,255,255,0.6);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 20px;
+            color: #333;
+            transition: background 0.3s;
+            border: none;
+            z-index: 10;
+        }
+
+        .arrow:hover {
+            background-color: rgba(255,255,255,1);
+        }
+
+        .arrow-left { left: 20px; }
+        .arrow-right { right: 20px; }
+
+        /* === ГАЛЕРЕЯ (НИЖНИЙ РЯД) === */
+        .gallery-grid {
+            max-width: 1200px;
+            margin: 0 auto 60px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .gallery-item {
+            height: 250px;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s;
+        }
+
+        .gallery-item:hover img {
+            transform: scale(1.05);
+        }
+
+        /* === ФУТЕР === */
+        footer {
+            background-color: #fff;
+            padding: 30px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #eee;
+        }
+
+        .social-icons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .social-icons a {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background-color: #e0f7fa;
+            color: #00bcd4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        .social-icons a:hover {
+            background-color: #00bcd4;
+            color: #fff;
+        }
+
+        .scroll-down {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            color: #00bcd4;
+            font-size: 24px;
+            animation: bounce 2s infinite;
+            display: none; /* Скрыто на малых экранах */
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+            40% {transform: translateY(-10px);}
+            60% {transform: translateY(-5px);}
+        }
+
+        /* Медиа запросы для мобильных */
+        @media (max-width: 768px) {
+            .categories { flex-wrap: wrap; }
+            .gallery-grid { grid-template-columns: 1fr; }
+            .featured-overlay { min-width: 80%; padding: 20px; }
+            nav ul { display: none; } /* Скрываем меню на моб для простоты */
+            .hero h1 { font-size: 24px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- --- Плейсхолдер Модального Окна (Заменяет alert()) --- -->
-    <div id="message-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[100]">
-        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full">
-            <h3 class="text-xl font-bold mb-3 text-gray-900">Уведомление</h3>
-            <p id="modal-message" class="text-gray-700 mb-4">Это пользовательское сообщение.</p>
-            <button onclick="closeModal()" class="w-full accent-cta py-2 rounded-lg font-semibold">Закрыть</button>
+    <header>
+        <div class="logo">
+            <i class="fa-solid fa-circle-notch"></i>
+            CONNECT
         </div>
-    </div>
-    <!-- --- КОНЕЦ Модального Окна --- -->
-
-
-    <!-- I. Шапка Сайта (Липкая Навигация) -->
-    <header id="site-header" class="header-bg text-white transition duration-300">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <!-- Логотип (Имя Ани) -->
-            <div class="flex items-center space-x-2">
-                <svg class="w-8 h-8 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11V3m0 8l4 4m-4-4l-4 4m9 10H3a2 2 0 01-2-2v-4a2 2 0 012-2h18a2 2 0 012 2v4a2 2 0 01-2 2z"></path></svg>
-                <span class="text-2xl font-extrabold tracking-tight">Аня Дизайн</span>
-            </div>
-            
-            <!-- Ссылки Навигации (Скрыты на мобильных) -->
-            <nav class="hidden md:flex space-x-6 lg:space-x-10">
-                <a href="#projects" class="hover:text-teal-400 transition">Проекты</a>
-                <a href="#services" class="hover:text-teal-400 transition">Услуги</a>
-                <a href="#insights" class="hover:text-teal-400 transition">Инсайты</a>
-                <a href="#contact" class="hover:text-teal-400 transition">Контакт</a>
-            </nav>
-
-            <!-- Основная Кнопка CTA -->
-            <button onclick="showMessage('Вы нажали кнопку Связаться со мной!')" class="hidden md:inline-block accent-cta px-6 py-2 rounded-lg font-bold shadow-lg">
-                Свяжитесь со мной
-            </button>
-        </div>
+        <nav>
+            <ul>
+                <li><a href="#">Hotels</a></li>
+                <li><a href="#">Flights</a></li>
+                <li><a href="#">Tours</a></li>
+                <li><a href="#">Train</a></li>
+                <li><i class="fa-solid fa-magnifying-glass search-icon"></i></li>
+            </ul>
+        </nav>
     </header>
 
     <main>
-        <!-- II. Секция Героя (Зацепка - Выше Сгиба) -->
-        <section class="pt-24 pb-16 bg-white border-b border-gray-100">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                <!-- H1: Четкий, Жирный, Ориентированный на Выгоду -->
-                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-4">
-                    Создаю сайты в <span class="text-teal-500">100 раз лучше</span>
-                </h1>
-                <!-- Подзаголовок -->
-                <p class="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-                    Я Аня, веб-дизайнер, который превращает идеи в быстрые, адаптивные и цепляющие проекты, ориентированные на удержание пользователей.
-                </p>
-                <!-- Основная Кнопка CTA -->
-                <button onclick="showMessage('Запрос отправлен. Скоро отвечу!')" class="accent-cta px-10 py-3 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition duration-300 transform hover:scale-105">
-                    Начать Сотрудничество
+        <section class="hero">
+            <h1>Discover Your Next Adventure</h1>
+            
+            <div class="categories">
+                <div class="cat-card">
+                    <div class="icon-box bg-winter">
+                        <i class="fa-regular fa-snowflake"></i>
+                    </div>
+                    <span class="cat-title">Winter<br>Escapes</span>
+                </div>
+                <div class="cat-card">
+                    <div class="icon-box bg-summer">
+                        <i class="fa-regular fa-sun"></i>
+                    </div>
+                    <span class="cat-title">Summer<br>Getaways</span>
+                </div>
+                <div class="cat-card">
+                    <div class="icon-box bg-active">
+                        <i class="fa-solid fa-person-hiking"></i>
+                    </div>
+                    <span class="cat-title">Summer<br>Activities</span>
+                </div>
+                <div class="cat-card">
+                    <div class="icon-box bg-romance">
+                        <i class="fa-solid fa-heart"></i>
+                    </div>
+                    <span class="cat-title">Romantic<br>Destinations</span>
+                </div>
+                <div class="cat-card">
+                    <div class="icon-box bg-relax">
+                        <i class="fa-solid fa-umbrella-beach"></i>
+                    </div>
+                    <span class="cat-title">Relaxation</span>
+                </div>
+                <div class="cat-card">
+                    <div class="icon-box bg-luxury">
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+                    <span class="cat-title">Luxury<br>Travel</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="featured-container">
+            <div class="featured-wrapper">
+                <button class="arrow arrow-left" onclick="prevSlide()">
+                    <i class="fa-solid fa-chevron-left"></i>
                 </button>
-                <p class="mt-4 text-sm text-gray-500">Отвечаю в течение 24 часов. Без обязательств.</p>
-
-                <!-- Плейсхолдер Визуального Сопровождения (Портрет или рабочий стол) -->
-                <div class="mt-12 bg-gray-100 rounded-2xl p-6 border-2 border-dashed border-gray-300 h-64 flex items-center justify-center">
-                    <span class="text-gray-500 text-lg font-semibold">Плейсхолдер: Профессиональный Портрет Ани или Макет Рабочего Проекта</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- III. Построение Доверия (Клиенты/Навыки) -->
-        <section class="py-8 bg-gray-50 border-b border-gray-100">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 class="text-center text-sm font-semibold uppercase tracking-wider text-gray-500 mb-6">
-                    Владею лучшими инструментами и методологиями
-                </h2>
-                <div class="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-75">
-                    <!-- Плейсхолдер Навыков/Инструментов -->
-                    <span class="text-gray-700 text-xl font-light">Figma</span>
-                    <span class="text-gray-700 text-xl font-light">Tailwind CSS</span>
-                    <span class="text-gray-700 text-xl font-light">UX Research</span>
-                    <span class="text-gray-700 text-xl font-light">React</span>
-                    <span class="text-gray-700 text-xl font-light">A/B Тестирование</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- IV. Основное Ценностное Предложение (Сферы Компетенции) -->
-        <section id="projects" class="py-20 bg-white">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-4">Мои Сферы Компетенции</h2>
-                <p class="text-xl text-gray-600 text-center mb-12 max-w-3xl mx-auto">
-                    Фокусируюсь на дизайне, который не только выглядит хорошо, но и работает на бизнес-цели.
-                </p>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <!-- Навык 1: UX/UI -->
-                    <div class="feature-card bg-white p-8 rounded-xl shadow-lg border border-gray-100">
-                        <div class="text-teal-500 mb-4">
-                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V6m3-2h10a2 2 0 012 2v10a2 2 0 01-2 2H9.06m-4.04-7.46l4.04 4.04m0 0l-4.04-4.04m4.04 4.04l-4.04-4.04"></path></svg>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-3">Идеальный UX/UI</h3>
-                        <p class="text-gray-600">
-                            Разрабатываю интуитивно понятные интерфейсы, которые доставляют удовольствие пользователям и обеспечивают высокий коэффициент конверсии.
-                        </p>
-                    </div>
-
-                    <!-- Навык 2: Адаптивность и Скорость -->
-                    <div class="feature-card bg-white p-8 rounded-xl shadow-lg border border-gray-100">
-                        <div class="text-teal-500 mb-4">
-                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1.5-1.5M16 17V3a1 1 0 00-1-1H9a1 1 0 00-1 1v14h10z"></path></svg>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-3">Mobile-First и Performance</h3>
-                        <p class="text-gray-600">
-                            Гарантирую безупречный вид на любом устройстве и молниеносную загрузку, критичную для удержания пользователя.
-                        </p>
-                    </div>
-
-                    <!-- Навык 3: Брендинг и Стиль -->
-                    <div class="feature-card bg-white p-8 rounded-xl shadow-lg border border-gray-100">
-                        <div class="text-teal-500 mb-4">
-                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-12 5h12m-9-16h8a3 3 0 013 3v11m-16-7h6"></path></svg>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-3">Визуальная Идентичность</h3>
-                        <p class="text-gray-600">
-                            Создаю четкую, запоминающуюся визуальную идентичность, которая выделяет ваш бренд среди конкурентов.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </section>
-        
-        <!-- V. Усилитель Вовлеченности (Лучшие Проекты) -->
-        <section id="insights" class="py-20 bg-gray-50 border-t border-gray-100">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="md:flex justify-between items-end mb-10">
-                    <div>
-                        <h2 class="text-3xl font-extrabold text-gray-900 mb-2">Избранные Проекты</h2>
-                        <p class="text-lg text-gray-600">Примеры работ, которые показывают мой уровень.</p>
-                    </div>
-                    <a href="#" class="text-teal-500 font-semibold hover:text-teal-600 transition mt-4 md:mt-0">Смотреть Все Проекты &rarr;</a>
-                </div>
-
-                <!-- Сетка Проектов (Удержание через Внутренние Ссылки) -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <!-- Проект 1 -->
-                    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300">
-                        <div class="p-6">
-                            <p class="text-sm text-teal-500 font-semibold mb-2 uppercase">UX/UI</p>
-                            <h3 class="text-xl font-bold text-gray-900 mb-3 hover:text-teal-600 cursor-pointer">
-                                Редизайн SaaS-Платформы для Финансистов
-                            </h3>
-                            <p class="text-gray-600 text-sm">Кейс-стади: как улучшить навигацию и повысить метрики удержания на 35%...</p>
-                        </div>
-                    </div>
-                    <!-- Проект 2 -->
-                    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300">
-                        <div class="p-6">
-                            <p class="text-sm text-teal-500 font-semibold mb-2 uppercase">Dev</p>
-                            <h3 class="text-xl font-bold text-gray-900 mb-3 hover:text-teal-600 cursor-pointer">
-                                Frontend для E-commerce на React и Tailwind
-                            </h3>
-                            <p class="text-gray-600 text-sm">Быстрый, современный и адаптивный интернет-магазин с нуля...</p>
-                        </div>
-                    </div>
-                    <!-- Проект 3 -->
-                    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition duration-300">
-                        <div class="p-6">
-                            <p class="text-sm text-teal-500 font-semibold mb-2 uppercase">Брендинг</p>
-                            <h3 class="text-xl font-bold text-gray-900 mb-3 hover:text-teal-600 cursor-pointer">
-                                Создание Визуальной Идентичности для Стартапа A
-                            </h3>
-                            <p class="text-gray-600 text-sm">Полный брендбук и дизайн-система для нового проекта...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- VI. Вторичный CTA (Скачать Резюме) -->
-        <section id="contact" class="py-16 bg-white">
-            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center bg-gray-900 p-10 md:p-16 rounded-3xl shadow-2xl">
-                <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-4">
-                    Уже готовы к сотрудничеству?
-                </h2>
-                <p class="text-lg text-gray-300 mb-8">
-                    Скачайте мое полное резюме, чтобы узнать о моем опыте подробнее.
-                </p>
-                <button onclick="showMessage('Резюме скачивается!')" class="accent-cta px-8 py-3 rounded-xl font-bold text-lg shadow-lg">
-                    Скачать Резюме (PDF)
+                
+                <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" 
+                     alt="Featured Destination" 
+                     id="sliderImage" 
+                     class="slide-image">
+                
+                <button class="arrow arrow-right" onclick="nextSlide()">
+                    <i class="fa-solid fa-chevron-right"></i>
                 </button>
+
+                <div class="featured-overlay">
+                    <h3>Featured Destination:</h3>
+                    <h2 id="sliderTitle">Alps Hiking Trail</h2>
+                </div>
             </div>
         </section>
 
+        <section class="gallery-grid">
+            <div class="gallery-item">
+                <img src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="City Street">
+            </div>
+            <div class="gallery-item">
+                <img src="https://images.unsplash.com/photo-1527529482837-4698179dc6ce?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Travel Documents">
+            </div>
+            <div class="gallery-item">
+                <img src="https://images.unsplash.com/photo-1516483638261-f4dbaf036963?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Cinque Terre Sunset">
+            </div>
+        </section>
     </main>
 
-    <!-- VII. Футер -->
-    <footer class="header-bg text-gray-300 pt-16 pb-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">
-                <!-- Кол 1: Логотип и Миссия -->
-                <div class="col-span-2">
-                    <div class="flex items-center space-x-2 mb-3">
-                        <svg class="w-7 h-7 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11V3m0 8l4 4m-4-4l-4 4m9 10H3a2 2 0 01-2-2v-4a2 2 0 012-2h18a2 2 0 012 2v4a2 2 0 01-2 2z"></path></svg>
-                        <span class="text-xl font-extrabold tracking-tight text-white">Аня Дизайн</span>
-                    </div>
-                    <p class="text-sm">Превращаю дизайн в прибыль. Намного лучше.</p>
-                </div>
-
-                <!-- Кол 2: Ссылки на Проекты -->
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Проекты</h4>
-                    <ul class="space-y-2 text-sm">
-                        <li><a href="#" class="hover:text-teal-400 transition">Веб-сайты</a></li>
-                        <li><a href="#" class="hover:text-teal-400 transition">UX/UI</a></li>
-                        <li><a href="#" class="hover:text-teal-400 transition">Брендинг</a></li>
-                        <li><a href="#" class="hover:text-teal-400 transition">Макеты</a></li>
-                    </ul>
-                </div>
-
-                <!-- Кол 3: Обо Мне -->
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Обо Мне</h4>
-                    <ul class="space-y-2 text-sm">
-                        <li><a href="#" class="hover:text-teal-400 transition">Опыт</a></li>
-                        <li><a href="#" class="hover:text-teal-400 transition">Резюме</a></li>
-                        <li><a href="#" class="hover:text-teal-400 transition">Отзывы</a></li>
-                        <li><a href="#" class="hover:text-teal-400 transition">Контакт</a></li>
-                    </ul>
-                </div>
-
-                <!-- Кол 4: Ресурсы -->
-                <div>
-                    <h4 class="text-white font-semibold mb-4">Ресурсы</h4>
-                    <ul class="space-y-2 text-sm">
-                        <li><a href="#" class="hover:text-teal-400 transition">Блог (Инсайты)</a></li>
-                        <li><a href="#" class="hover:text-teal-400 transition">Процесс Работы</a></li>
-                        <li><a href="#" class="hover:text-teal-400 transition">FAQ</a></li>
-                        <li><a href="#" class="hover:text-teal-400 transition">Политика</a></li>
-                    </ul>
-                </div>
-
-                <!-- Кол 5: Подписка (Элемент Удержания) -->
-                <div class="col-span-2">
-                    <h4 class="text-white font-semibold mb-4">Следите за мной</h4>
-                    <p class="text-sm mb-4">Получайте эксклюзивные инсайты о дизайне и технологиях.</p>
-                    <form onsubmit="handleSubscription(event)">
-                        <div class="flex">
-                            <input type="email" placeholder="Ваш email" required class="w-full p-3 rounded-l-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500" id="email-subscribe-input">
-                            <button type="submit" class="accent-cta px-5 py-3 rounded-r-lg font-semibold whitespace-nowrap">
-                                Подписаться
-                            </button>
-                        </div>
-                    </form>
-                    <div class="flex space-x-4 mt-6">
-                        <!-- Иконки Соцсетей -->
-                        <a href="#" class="text-gray-400 hover:text-teal-500 transition">
-                            <!-- SVG: X/Twitter -->
-                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M19.633 7.994a8.038 8.038 0 01-2.267.618 4.013 4.013 0 001.764-2.179 8.077 8.077 0 01-2.529.967 4.01 4.01 0 00-6.837 3.654A11.396 11.396 0 013.8 6.452a4.01 4.01 0 001.242 5.352 4.017 4.017 0 01-1.815-.504v.05A4.01 4.01 0 006.12 16.593a4.032 4.032 0 01-1.815.07 4.013 4.013 0 003.737 2.793A8.064 8.064 0 013 20.25a11.353 11.353 0 006.164 1.83c7.408 0 11.458-6.133 11.458-11.458 0-.175-.004-.349-.009-.523A8.172 8.172 0 0021 7.228z"/></svg>
-                        </a>
-                        <a href="#" class="text-gray-400 hover:text-teal-500 transition">
-                            <!-- SVG: LinkedIn -->
-                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M22.23 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.73V1.73C24 .77 23.21 0 22.23 0zM7.27 20.35H3.59V8.65h3.68v11.7zM5.43 7.23c-1.21 0-2.2-.98-2.2-2.19 0-1.21.99-2.19 2.2-2.19s2.2.98 2.2 2.19c.01 1.21-.98 2.19-2.2 2.19zM20.35 20.35h-3.68V14.5c0-1.39-.53-2.34-1.82-2.34-1.02 0-1.63.69-1.9.99-.1.08-.2.27-.2.52v6.68H9.07s.05-10.74 0-11.7h3.68v1.57h.05c.49-.78 1.34-1.78 3.32-1.78 2.42 0 4.22 1.58 4.22 4.99v6.92z"/></svg>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Авторское право/Юридическая информация -->
-            <div class="mt-12 pt-8 border-t border-gray-700 text-center text-sm">
-                &copy; <span id="current-year"></span> Аня Дизайн. Все права защищены.
-            </div>
+    <footer>
+        <div class="logo">
+            <i class="fa-solid fa-circle-notch"></i>
+            CONNECT
+        </div>
+        <div class="social-icons">
+            <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="#"><i class="fa-brands fa-twitter"></i></a>
+            <a href="#"><i class="fa-brands fa-instagram"></i></a>
+            <a href="#"><i class="fa-brands fa-vk"></i></a>
         </div>
     </footer>
 
     <script>
-        // --- Пользовательский JS для Улучшения Удержания/UX ---
-
-        // Получить текущий год для копирайта в футере
-        document.getElementById('current-year').textContent = new Date().getFullYear();
-
-        // 1. Логика Липкого Заголовка
-        const header = document.getElementById('site-header');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 100) {
-                header.classList.add('sticky-header');
-                header.classList.add('shadow-xl');
-            } else {
-                header.classList.remove('sticky-header');
-                header.classList.remove('shadow-xl');
+        // Данные для слайдера
+        const slides = [
+            {
+                image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+                title: "Alps Hiking Trail"
+            },
+            {
+                image: "https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+                title: "Maldives Beaches"
+            },
+            {
+                image: "https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+                title: "Bali Rainforest"
             }
-        });
+        ];
 
-        // 2. Пользовательское Модальное Окно (Заменяет alert())
-        function showMessage(message) {
-            document.getElementById('modal-message').textContent = message;
-            document.getElementById('message-modal').classList.remove('hidden');
+        let currentSlide = 0;
+        const imgElement = document.getElementById('sliderImage');
+        const titleElement = document.getElementById('sliderTitle');
+
+        function updateSlide() {
+            // Добавляем эффект затемнения при смене
+            imgElement.style.opacity = 0;
+            
+            setTimeout(() => {
+                imgElement.src = slides[currentSlide].image;
+                titleElement.textContent = slides[currentSlide].title;
+                imgElement.style.opacity = 1;
+            }, 200);
         }
 
-        function closeModal() {
-            document.getElementById('message-modal').classList.add('hidden');
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % slides.length;
+            updateSlide();
         }
 
-        // 3. Обработчик Подписки на Email
-        function handleSubscription(event) {
-            event.preventDefault();
-            const emailInput = document.getElementById('email-subscribe-input');
-            const email = emailInput.value;
-            // В реальном приложении это 'email' отправлялся бы в бэкэнд
-            showMessage(`Спасибо за подписку, ${email}!`);
-            emailInput.value = ''; // Очистить ввод
+        function prevSlide() {
+            currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+            updateSlide();
         }
-
-        // 4. Плейсхолдер для "Продолжить Чтение"
-        // В продакшн-приложении это использовало бы cookies или локальное хранилище.
-        window.onload = function() {
-            const isReturningUser = Math.random() < 0.3; // 30% шанс для демо
-            if (isReturningUser) {
-                // Пример того, как можно внедрить липкий баннер
-                const stickyBanner = document.createElement('div');
-                stickyBanner.innerHTML = `
-                    <div class="fixed top-0 left-0 right-0 z-40 bg-yellow-400 p-3 text-center text-gray-900 font-semibold shadow-lg mt-[76px] sm:mt-[68px]">
-                        👋 С возвращением! <a href="#" class="underline hover:text-teal-700">Продолжить чтение последнего инсайта: "Frontend для E-commerce..."</a>
-                        <button onclick="this.parentNode.remove()" class="ml-4 text-gray-700 hover:text-gray-900 font-bold">&times;</button>
-                    </div>
-                `;
-                document.body.prepend(stickyBanner);
-            }
-        };
-
     </script>
 </body>
 </html>
