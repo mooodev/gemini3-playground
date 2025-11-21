@@ -1,1 +1,392 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anya Dev | Portfolio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Montserrat:wght@300;500&display=swap" rel="stylesheet">
 
+    <style>
+        /* --- RESET & VARIABLES --- */
+        :root {
+            --bg-color: #0a0a0a;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --text-main: #e0e0e0;
+            --text-accent: #d4af37; /* Золотой оттенок для "дороговизны" */
+            --border-color: rgba(255, 255, 255, 0.1);
+            --font-heading: 'Cormorant Garamond', serif;
+            --font-body: 'Montserrat', sans-serif;
+            --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            overflow-x: hidden;
+            /* Фоновый градиент для глубины */
+            background-image: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #0a0a0a 70%);
+        }
+
+        a { text-decoration: none; color: inherit; transition: var(--transition); }
+        ul { list-style: none; }
+
+        /* --- LAYOUT UTILITIES --- */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* --- HEADER --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 30px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            border: 1px solid var(--text-accent);
+            padding: 5px 15px;
+            letter-spacing: 2px;
+            color: var(--text-accent);
+        }
+
+        nav ul {
+            display: flex;
+            gap: 30px;
+        }
+
+        nav a {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.7;
+        }
+
+        nav a:hover {
+            opacity: 1;
+            color: var(--text-accent);
+        }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            text-align: center;
+            padding: 80px 0;
+            position: relative;
+        }
+
+        .hero h1 {
+            font-family: var(--font-heading);
+            font-size: 4rem;
+            font-weight: 400;
+            margin-bottom: 10px;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.6;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* --- CARDS SECTION (Based on Sketch: Snowflake, Sun, Heart, Star) --- */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 80px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 40px 20px;
+            text-align: center;
+            transition: var(--transition);
+            backdrop-filter: blur(10px);
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            border-color: var(--text-accent);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: var(--text-accent);
+            display: block;
+        }
+
+        .card h3 {
+            font-family: var(--font-heading);
+            margin-bottom: 10px;
+        }
+
+        .card p {
+            font-size: 0.85rem;
+            opacity: 0.5;
+        }
+
+        /* --- SLIDER SECTION --- */
+        .slider-section {
+            position: relative;
+            margin-bottom: 80px;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slider-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .arrow {
+            font-size: 3rem;
+            cursor: pointer;
+            opacity: 0.3;
+            transition: var(--transition);
+            user-select: none;
+        }
+
+        .arrow:hover {
+            opacity: 1;
+            color: var(--text-accent);
+        }
+
+        .slide-content {
+            width: 60%;
+            height: 100%;
+            background: #151515;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.4;
+            transition: var(--transition);
+        }
+        
+        .slide-content:hover .slide-image {
+            transform: scale(1.05);
+            opacity: 0.6;
+        }
+
+        .slide-info {
+            position: absolute;
+            z-index: 2;
+            text-align: center;
+        }
+
+        .slide-info h2 {
+            font-family: var(--font-heading);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        /* --- BOTTOM GRID --- */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            height: 200px;
+            margin-bottom: 80px;
+        }
+
+        .grid-item {
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            color: #555;
+            transition: var(--transition);
+        }
+
+        .grid-item:hover {
+            background: var(--card-bg);
+            color: var(--text-main);
+        }
+
+        /* --- FOOTER --- */
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 40px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            opacity: 0.6;
+        }
+
+        .socials {
+            display: flex;
+            gap: 20px;
+        }
+
+        .social-icon {
+            width: 30px;
+            height: 30px;
+            border: 1px solid var(--text-main);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .social-icon:hover {
+            border-color: var(--text-accent);
+            color: var(--text-accent);
+        }
+
+        /* Адаптив для мобильных */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.5rem; }
+            .slide-content { width: 90%; }
+            .bottom-grid { grid-template-columns: 1fr; height: auto; }
+            .grid-item { height: 150px; }
+            header, footer { flex-direction: column; gap: 20px; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div class="logo">ANYA</div>
+            <nav>
+                <ul>
+                    <li><a href="#">Обо мне</a></li>
+                    <li><a href="#">Проекты</a></li>
+                    <li><a href="#">Контакты</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main>
+            <section class="hero">
+                <h1>Разработка со вкусом</h1>
+                <p>Создаю цифровые продукты, которые запоминаются.</p>
+            </section>
+
+            <section class="features">
+                <div class="card">
+                    <span class="card-icon">♡</span>
+                    <h3>Чистый код</h3>
+                    <p>Структурированная логика и высокая производительность, холодный расчет в каждой строке.</p>
+                </div>
+                <div class="card">
+                    <span class="card-icon">☀</span>
+                    <h3>Креатив</h3>
+                    <p>Яркие идеи и нестандартные решения, которые выделяют ваш бренд.</p>
+                </div>
+                <div class="card">
+                    <span class="card-icon">♡</span>
+                    <h3>Любовь к UX</h3>
+                    <p>Интерфейсы, созданные с заботой о пользователе и вниманием к деталям.</p>
+                </div>
+                <div class="card">
+                    <span class="card-icon">☆</span>
+                    <h3>Качество</h3>
+                    <p>Звездный результат. Сдача проектов точно в срок и выше ожиданий.</p>
+                </div>
+            </section>
+
+            <section class="slider-section">
+                <div class="slider-container">
+                    <div class="arrow" id="prevBtn">←</div>
+                    
+                    <div class="slide-content">
+                        <div class="slide-info">
+                            <h2 id="slideTitle">Project Alpha</h2>
+                            <p id="slideDesc">E-commerce platform</p>
+                        </div>
+                        <div class="slide-image" style="background: linear-gradient(45deg, #222, #444); position: absolute; top:0; left:0; width:100%; height:100%; z-index:1;"></div>
+                    </div>
+
+                    <div class="arrow" id="nextBtn">→</div>
+                </div>
+            </section>
+
+            <section class="bottom-grid">
+                <div class="grid-item">Blog</div>
+                <div class="grid-item">Gallery</div>
+                <div class="grid-item">More ↓</div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="logo" style="font-size: 1rem;">ANYA</div>
+            <div>© 2025 Anya Developer. All Rights Reserved.</div>
+            <div class="socials">
+                <a href="#" class="social-icon">TG</a>
+                <a href="#" class="social-icon">✈</a>
+                <a href="#" class="social-icon">VK</a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const titles = ["Project Alpha", "Neon Dash", "Cyber Folio"];
+        const descs = ["E-commerce platform", "Web Application", "Design System"];
+        let currentIndex = 0;
+
+        const titleEl = document.getElementById('slideTitle');
+        const descEl = document.getElementById('slideDesc');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        function updateSlide(index) {
+            // Simple fade effect simulation
+            titleEl.style.opacity = 0;
+            descEl.style.opacity = 0;
+            
+            setTimeout(() => {
+                titleEl.innerText = titles[index];
+                descEl.innerText = descs[index];
+                titleEl.style.opacity = 1;
+                descEl.style.opacity = 1;
+            }, 200);
+        }
+
+        nextBtn.addEventListener('click', () => {
+            currentIndex = (currentIndex + 1) % titles.length;
+            updateSlide(currentIndex);
+        });
+
+        prevBtn.addEventListener('click', () => {
+            currentIndex = (currentIndex - 1 + titles.length) % titles.length;
+            updateSlide(currentIndex);
+        });
+    </script>
+</body>
+</html>
