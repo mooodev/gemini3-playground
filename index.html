@@ -229,9 +229,11 @@
         carBody = new THREE.Group();
         carGroup.add(carBody);
 
-        // Load the FBX model
+        // Load the FBX model using a CORS proxy to avoid CORS issues
+        const proxyUrl = 'https://api.allorigins.win/raw?url=';
+        const modelUrl = 'https://raw.githubusercontent.com/mooodev/tools/main/images/Lada.fbx';
         const loader = new THREE.FBXLoader();
-        loader.load('https://github.com/mooodev/tools/raw/refs/heads/main/images/Lada.fbx', (object) => {
+        loader.load(proxyUrl + encodeURIComponent(modelUrl), (object) => {
             object.traverse((child) => {
                 if (child.isMesh) {
                     child.castShadow = true;
